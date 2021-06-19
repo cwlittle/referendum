@@ -1,5 +1,6 @@
+use regex::Regex;
+use std::collections::BTreeSet;
 use std::process::Command;
-
 use std::str;
 
 fn run_tests(toolkit: &str) -> String {
@@ -25,6 +26,14 @@ fn parse_test_output(output: &str) -> Vec<String> {
     lines
 }
 
+fn get_test_names(lines: &Vec<String>) -> BTreeSet<String> {
+    let re = Regex::new("[a-zA-z_0-9]+::[a-zA-Z_0-9]+").unwrap();
+    let lines_string = lines.join(" ");
+    re.find_iter(&lines_string)
+        .filter_map(|digits| digits.as_str().parse().ok())
+        .collect()
+}
+
 fn main() {
     let toolkits = [
         "nightly-2021-06-03-x86_64-apple-darwin",
@@ -33,8 +42,7 @@ fn main() {
 
     for kit in toolkits {
         let lines = parse_test_output(&run_tests(kit));
-        println!("toolkit: {}", kit);
-        println!("{:?}", lines);
+        println!("{:?}", get_test_names(&lines));
     }
 }
 
@@ -54,5 +62,13 @@ mod tests {
         let input = "Hello\nWorld";
         let expected = vec!["Hello", "World"];
         assert_eq!(parse_test_output(input), expected);
+    }
+
+    #[test]
+    fn extract_test_name() {
+        let input = vec![String::from("test tests::test_1 ... ok")];
+        let mut expected = BTreeSet::new();
+        expected.insert(String::from("tests::test_1"));
+        assert_eq!(get_test_names(&input), expected);
     }
 }
