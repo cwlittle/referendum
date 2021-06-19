@@ -34,6 +34,23 @@ fn get_test_names(lines: &Vec<String>) -> BTreeSet<String> {
         .collect()
 }
 
+fn get_test_result(test_name: &String, lines: &Vec<String>) -> bool {
+    let re = Regex::new("[a-zA-z_0-9]+::[a-zA-Z_0-9]+ ... (ok|FAILED)").unwrap();
+    let lines_string = lines.join(" ");
+    let result_lines: Vec<String> = re
+        .find_iter(&lines_string)
+        .filter_map(|digits| digits.as_str().parse().ok())
+        .collect();
+
+    for item in result_lines {
+        if item.contains(test_name) {
+            return item.contains("ok");
+        }
+    }
+
+    panic!("You shouldn't be here");
+}
+
 fn main() {
     let toolkits = [
         "nightly-2021-06-03-x86_64-apple-darwin",
@@ -42,7 +59,11 @@ fn main() {
 
     for kit in toolkits {
         let lines = parse_test_output(&run_tests(kit));
-        println!("{:?}", get_test_names(&lines));
+        let unique_test_names = get_test_names(&lines);
+        for test in unique_test_names.iter() {
+            let test_output = get_test_result(&test, &lines);
+            println!("{}: {}", test, test_output);
+        }
     }
 }
 
