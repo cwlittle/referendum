@@ -24,12 +24,12 @@ fn run_tests(toolkit: &str) -> String {
 }
 
 fn parse_test_output(output: &str) -> Vec<String> {
-    let lines: Vec<String> = output.split("\n").map(|x| x.to_string()).collect();
+    let lines: Vec<String> = output.split('\n').map(|x| x.to_string()).collect();
 
     lines
 }
 
-fn get_test_names(lines: &Vec<String>) -> BTreeSet<String> {
+fn get_test_names(lines: &[String]) -> BTreeSet<String> {
     let re = Regex::new("[a-zA-z_0-9]+::[a-zA-Z_0-9]+").unwrap();
     let lines_string = lines.join(" ");
     re.find_iter(&lines_string)
@@ -37,7 +37,7 @@ fn get_test_names(lines: &Vec<String>) -> BTreeSet<String> {
         .collect()
 }
 
-fn get_test_result(test_name: &String, lines: &Vec<String>) -> bool {
+fn get_test_result(test_name: &str, lines: &[String]) -> bool {
     let re = Regex::new("[a-zA-z_0-9]+::[a-zA-Z_0-9]+ ... (ok|FAILED)").unwrap();
     let lines_string = lines.join(" ");
     let result_lines: Vec<String> = re
@@ -54,14 +54,14 @@ fn get_test_result(test_name: &String, lines: &Vec<String>) -> bool {
     panic!("You shouldn't be here");
 }
 
-fn get_test_output(test_name: &String, lines: &Vec<String>) -> String {
+fn get_test_output(test_name: &str, lines: &[String]) -> String {
     //TODO: Clean this, it's repulsive
     let mut start: usize = 0;
     let mut end: usize = lines.len() - 1;
 
     let mut builder = Builder::default();
     builder.append("---- ");
-    builder.append(test_name.clone());
+    builder.append(test_name.to_string());
     builder.append(" stdout ----");
     let start_string = builder.string().unwrap();
     let start_re = Regex::new(&start_string).unwrap();
@@ -76,14 +76,10 @@ fn get_test_output(test_name: &String, lines: &Vec<String>) -> String {
             start = i + 1;
         } else if next_test_re.is_match(line)
             || failure_re.is_match(line)
-            || success_re.is_match(line)
+            || success_re.is_match(line) && start_found && i - 1 > start
         {
-            if start_found {
-                if i - 1 > start {
-                    end = i - 1;
-                    break;
-                }
-            }
+            end = i - 1;
+            break;
         }
     }
     lines[start..=end].concat()
@@ -109,9 +105,9 @@ fn main() {
         let lines = parse_test_output(&run_tests(kit));
         let unique_test_names = get_test_names(&lines);
         for test in unique_test_names.iter() {
-            let test_result = get_test_result(&test, &lines);
-            let test_output = get_test_output(&test, &lines);
-            let output_hash = sea::hash64(&test_output.as_bytes());
+            let test_result = get_test_result(test, &lines);
+            let test_output = get_test_output(test, &lines);
+            let output_hash = sea::hash64(test_output.as_bytes());
             let output_obj = Test {
                 name: test.clone(),
                 result: test_result,
