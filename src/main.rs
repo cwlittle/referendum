@@ -148,12 +148,13 @@ fn main() {
         let unique_test_names = get_test_names(&lines);
         for test in unique_test_names.iter() {
             let test_output = get_test_output(test, &lines);
+            let test_result = get_test_result(test, &lines);
             let output_obj = Test {
                 name: test.clone(),
                 toolkit: kit.to_string(),
-                result: get_test_result(test, &lines),
+                result: test_result,
                 output: test_output.clone(),
-                hash: sea::hash64(test_output.as_bytes()),
+                hash: sea::hash64((test_result.to_string() + &test_output).as_bytes()),
             };
             tests.push(output_obj);
         }
@@ -164,6 +165,8 @@ fn main() {
         let entry = test_map.entry(test.name.clone()).or_insert(Vec::new()); 
         entry.push(test);
     }
+
+    dbg!(test_map);
     
 }
 
@@ -286,6 +289,7 @@ mod tests {
     fn get_consensus() {
         let test_1 = Test {
             name: "test_1".to_string(),
+            toolkit: "nightly".to_string(),
             result: true,
             output: "test output".to_string(),
             hash: 42,
@@ -293,6 +297,7 @@ mod tests {
 
         let test_2 = Test {
             name: "test_2".to_string(),
+            toolkit: "nightly".to_string(),
             result: false,
             output: "test output".to_string(),
             hash: 42,
@@ -300,6 +305,7 @@ mod tests {
 
         let test_3 = Test {
             name: "test_3".to_string(),
+            toolkit: "nightly".to_string(),
             result: false,
             output: "test output".to_string(),
             hash: 12,
