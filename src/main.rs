@@ -201,7 +201,7 @@ mod tests {
     #[test]
     fn extract_test_output_real() {
         let test_name = String::from("tests::test_1");
-        let lines = vec![
+        let lines = [
             "", 
             "running 2 tests", 
             "test tests::test_1 ... ok", 
@@ -231,7 +231,7 @@ mod tests {
             "", 
             ""
         ];
-        let lines = lines.iter().map(|x| x.to_string()).collect();
+        let lines: Vec<String> = lines.iter().map(|x| x.to_string()).collect();
         assert_eq!(get_test_output(&test_name, &lines), "Hello, Earthlings!");
     }
 }
