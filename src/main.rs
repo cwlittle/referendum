@@ -104,30 +104,54 @@ fn get_test_output(test_name: &str, lines: &[String]) -> String {
     lines[start..=end].concat()
 }
 
-fn get_consensus_hash(tests: &Vec<Test>) -> (u64, String) {
+fn get_consensus_hash(tests: &Vec<Test>) -> Option<u64> {
     let mut map: HashMap<u64, u8> = HashMap::new();
     for test in tests {
         let count = map.entry(test.hash).or_insert(0);
         *count += 1;
     }
 
-    let max_hash = map
-        .iter()
-        .max_by(|a, b| a.1.cmp(&b.1))
-        .map(|(k, _v)| k)
-        .unwrap();
+    let max_hash = map.iter().max_by(|a, b| a.1.cmp(&b.1)).unwrap();
 
-    let mut max_hash_output = String::new();
-    for test in tests {
-        if test.hash == *max_hash {
-            max_hash_output = test.output.clone();
-        }
+    match max_hash.1 {
+        1 => None,
+        _ => Some(max_hash.0.clone()),
     }
-    //need another loop to account for when there is no consensus
-    (max_hash.clone(), max_hash_output)
 }
 
-#[derive(Debug)]
+fn vote(tests: Vec<Test>) -> Vec<Vec<Test>> {
+    let mut test_map: HashMap<String, Vec<Test>> = HashMap::new();
+    for test in tests {
+        let entry = test_map.entry(test.name.clone()).or_insert(Vec::new());
+        entry.push(test);
+    }
+
+    let mut matches: Vec<Test> = Vec::new();
+    let mut non_matches: Vec<Test> = Vec::new();
+    let mut no_consensus: Vec<Test> = Vec::new();
+
+    for (_name, test_list) in test_map.iter() {
+        let consensus = match get_consensus_hash(test_list) {
+            Some(hash) => hash,
+            None => {
+                for test in test_list {
+                    no_consensus.push(test.clone());
+                }
+                continue;
+            }
+        };
+
+        for test in test_list {
+            match test.hash == consensus {
+                true => matches.push(test.clone()),
+                false => non_matches.push(test.clone()),
+            }
+        }
+    }
+    vec![matches, non_matches, no_consensus]
+}
+
+#[derive(Debug, Clone)]
 struct Test {
     name: String,
     toolkit: String,
@@ -160,14 +184,8 @@ fn main() {
         }
     }
 
-    let mut test_map: HashMap<String, Vec<Test>> = HashMap::new();
-    for test in tests {
-        let entry = test_map.entry(test.name.clone()).or_insert(Vec::new()); 
-        entry.push(test);
-    }
-
-    dbg!(test_map);
-    
+    let votes = vote(tests);
+    dbg!(votes);
 }
 
 #[cfg(test)]
