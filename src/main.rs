@@ -55,7 +55,7 @@ fn get_test_result(test_name: &String, lines: &Vec<String>) -> bool {
 }
 
 fn get_test_output(test_name: &String, lines: &Vec<String>) -> String {
-    //this doesn't work if there are multiple success and failures in the group
+    //TODO: Clean this, it's repulsive
     let mut start: usize = 0;
     let mut end: usize = lines.len() - 1;
 
