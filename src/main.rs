@@ -331,6 +331,6 @@ mod tests {
 
         let tests: Vec<Test> = vec![test_1, test_2, test_3];
         let consensus = get_consensus_hash(&tests);
-        assert_eq!(consensus, (42, "test output".to_string()));
+        assert_eq!(consensus, Some(42));
     }
 }
