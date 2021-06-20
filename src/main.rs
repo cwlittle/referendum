@@ -1,6 +1,7 @@
 use fasthash::sea;
 use regex::Regex;
 use std::collections::BTreeSet;
+use std::collections::HashMap;
 use std::process::Command;
 use std::str;
 use string_builder::Builder;
@@ -85,20 +86,42 @@ fn get_test_output(test_name: &str, lines: &[String]) -> String {
     lines[start..=end].concat()
 }
 
+fn get_consensus_hash(tests: &Vec<Test>) -> (u64, String) {
+    let mut map: HashMap<u64, u8> = HashMap::new();
+    for test in tests {
+        let count = map.entry(test.hash).or_insert(0);
+        *count += 1;
+    }
+
+    let max_hash = map
+        .iter()
+        .max_by(|a, b| a.1.cmp(&b.1))
+        .map(|(k, _v)| k)
+        .unwrap();
+
+    let mut max_hash_output = String::new();
+    for test in tests {
+        if test.hash == *max_hash {
+            max_hash_output = test.output.clone();
+        }
+    }
+    //need another loop to account for when there is no consensus
+    (max_hash.clone(), max_hash_output)
+}
+
+#[derive(Debug)]
+struct Test {
+    name: String,
+    result: bool,
+    output: String,
+    hash: u64,
+}
+
 fn main() {
     let toolkits = [
         "nightly-2021-06-03-x86_64-apple-darwin",
         "nightly-x86_64-apple-darwin",
     ];
-
-    #[derive(Debug)]
-    struct Test {
-        name: String,
-        result: bool,
-        output: String,
-        hash: u64,
-        matches_consensus: bool,
-    }
 
     let mut tests: Vec<Test> = Vec::new();
     for kit in toolkits {
@@ -113,7 +136,6 @@ fn main() {
                 result: test_result,
                 output: test_output,
                 hash: output_hash,
-                matches_consensus: false,
             };
             tests.push(output_obj);
         }
@@ -233,5 +255,33 @@ mod tests {
         ];
         let lines: Vec<String> = lines.iter().map(|x| x.to_string()).collect();
         assert_eq!(get_test_output(&test_name, &lines), "Hello, Earthlings!");
+    }
+
+    #[test]
+    fn get_consensus() {
+        let test_1 = Test {
+            name: "test_1".to_string(),
+            result: true,
+            output: "test output".to_string(),
+            hash: 42,
+        };
+
+        let test_2 = Test {
+            name: "test_2".to_string(),
+            result: false,
+            output: "test output".to_string(),
+            hash: 42,
+        };
+
+        let test_3 = Test {
+            name: "test_3".to_string(),
+            result: false,
+            output: "test output".to_string(),
+            hash: 12,
+        };
+
+        let tests: Vec<Test> = vec![test_1, test_2, test_3];
+        let consensus = get_consensus_hash(&tests);
+        assert_eq!(consensus, (42, "test output".to_string()));
     }
 }
