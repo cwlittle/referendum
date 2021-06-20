@@ -158,6 +158,13 @@ fn main() {
             tests.push(output_obj);
         }
     }
+
+    let mut test_map: HashMap<String, Vec<Test>> = HashMap::new();
+    for test in tests {
+        let entry = test_map.entry(test.name.clone()).or_insert(Vec::new()); 
+        entry.push(test);
+    }
+    
 }
 
 #[cfg(test)]
