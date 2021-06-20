@@ -130,6 +130,7 @@ fn get_consensus_hash(tests: &Vec<Test>) -> (u64, String) {
 #[derive(Debug)]
 struct Test {
     name: String,
+    toolkit: String,
     result: bool,
     output: String,
     hash: u64,
@@ -146,14 +147,13 @@ fn main() {
         let lines = parse_test_output(&run_tests(kit));
         let unique_test_names = get_test_names(&lines);
         for test in unique_test_names.iter() {
-            let test_result = get_test_result(test, &lines);
             let test_output = get_test_output(test, &lines);
-            let output_hash = sea::hash64(test_output.as_bytes());
             let output_obj = Test {
                 name: test.clone(),
-                result: test_result,
-                output: test_output,
-                hash: output_hash,
+                toolkit: kit.to_string(),
+                result: get_test_result(test, &lines),
+                output: test_output.clone(),
+                hash: sea::hash64(test_output.as_bytes()),
             };
             tests.push(output_obj);
         }
