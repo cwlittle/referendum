@@ -151,21 +151,7 @@ fn vote(tests: Vec<Test>) -> Vec<Vec<Test>> {
     vec![matches, non_matches, no_consensus]
 }
 
-#[derive(Debug, Clone)]
-struct Test {
-    name: String,
-    toolkit: String,
-    result: bool,
-    output: String,
-    hash: u64,
-}
-
-fn main() {
-    let toolkits = [
-        "nightly-2021-06-03-x86_64-apple-darwin",
-        "nightly-x86_64-apple-darwin",
-    ];
-
+fn get_tests(toolkits: Vec<&str>) -> Vec<Test> {
     let mut tests: Vec<Test> = Vec::new();
     for kit in toolkits {
         let lines = parse_test_output(&run_tests(kit));
@@ -183,7 +169,25 @@ fn main() {
             tests.push(output_obj);
         }
     }
+    tests
+}
 
+#[derive(Debug, Clone)]
+struct Test {
+    name: String,
+    toolkit: String,
+    result: bool,
+    output: String,
+    hash: u64,
+}
+
+fn main() {
+    let toolkits = vec![
+        "nightly-2021-06-03-x86_64-apple-darwin",
+        "nightly-x86_64-apple-darwin",
+    ];
+
+    let tests = get_tests(toolkits);
     let votes = vote(tests);
     dbg!(votes);
 }
