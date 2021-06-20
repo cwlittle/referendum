@@ -31,28 +31,43 @@ fn parse_test_output(output: &str) -> Vec<String> {
 }
 
 fn get_test_names(lines: &[String]) -> BTreeSet<String> {
-    let re = Regex::new("[a-zA-z_0-9]+::[a-zA-Z_0-9]+").unwrap();
+    let re = Regex::new("test [a-zA-z_0-9]+::[a-zA-Z_0-9]+").unwrap();
     let lines_string = lines.join(" ");
-    re.find_iter(&lines_string)
+    let names: Vec<String> = re
+        .find_iter(&lines_string)
         .filter_map(|digits| digits.as_str().parse().ok())
+        .collect();
+    names
+        .iter()
+        .map(|name| name.replacen("test ", "", 1))
         .collect()
 }
 
 fn get_test_result(test_name: &str, lines: &[String]) -> bool {
     let re = Regex::new("[a-zA-z_0-9]+::[a-zA-Z_0-9]+ ... (ok|FAILED)").unwrap();
+    let re_should_panic =
+        Regex::new("[a-zA-z_0-9]+::[a-zA-Z_0-9]+ - should panic ... (ok|FAILED)").unwrap();
     let lines_string = lines.join(" ");
-    let result_lines: Vec<String> = re
+
+    let mut result_lines: Vec<String> = re
         .find_iter(&lines_string)
         .filter_map(|digits| digits.as_str().parse().ok())
         .collect();
 
-    for item in result_lines {
+    let panic_result_lines: Vec<String> = re_should_panic
+        .find_iter(&lines_string)
+        .filter_map(|digits| digits.as_str().parse().ok())
+        .collect();
+
+    result_lines.extend(panic_result_lines);
+
+    for item in result_lines.iter() {
         if item.contains(test_name) {
             return item.contains("ok");
         }
     }
 
-    panic!("You shouldn't be here");
+    panic!("Error getting test results");
 }
 
 fn get_test_output(test_name: &str, lines: &[String]) -> String {
@@ -82,6 +97,9 @@ fn get_test_output(test_name: &str, lines: &[String]) -> String {
             end = i - 1;
             break;
         }
+    }
+    if !start_found {
+        return "".to_string();
     }
     lines[start..=end].concat()
 }
