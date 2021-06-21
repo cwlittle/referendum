@@ -119,7 +119,7 @@ fn get_consensus_hash(tests: &Vec<Test>) -> Option<u64> {
     }
 }
 
-fn vote(tests: Vec<Test>) -> Vec<Vec<Test>> {
+fn vote(tests: Vec<Test>) -> VoteResult {
     let mut test_map: HashMap<String, Vec<Test>> = HashMap::new();
     for test in tests {
         let entry = test_map.entry(test.name.clone()).or_insert(Vec::new());
@@ -148,7 +148,12 @@ fn vote(tests: Vec<Test>) -> Vec<Vec<Test>> {
             }
         }
     }
-    vec![matches, non_matches, no_consensus]
+
+    VoteResult {
+        matches,
+        non_matches,
+        no_consensus,
+    }
 }
 
 fn get_tests(toolkits: Vec<&str>) -> Vec<Test> {
@@ -179,6 +184,13 @@ struct Test {
     result: bool,
     output: String,
     hash: u64,
+}
+
+#[derive(Debug)]
+struct VoteResult {
+    matches: Vec<Test>,
+    non_matches: Vec<Test>,
+    no_consensus: Vec<Test>,
 }
 
 fn main() {
