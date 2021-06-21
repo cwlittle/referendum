@@ -2,11 +2,21 @@ use fasthash::sea;
 use regex::Regex;
 use std::collections::BTreeSet;
 use std::collections::HashMap;
-use std::process::Command;
+use std::process::{exit, Command};
 use std::str;
 use string_builder::Builder;
 
-fn run_tests(toolkit: &str) -> String {
+#[derive(thiserror::Error, Debug)]
+pub enum ReferendumError {
+    #[error("Test run failed to execute")]
+    TestRunFailure(),
+    #[error("Test run extraction failure")]
+    TestResultExtractionFailure(),
+}
+
+pub type Result<T> = std::result::Result<T, ReferendumError>;
+
+fn run_tests(toolkit: &str) -> Result<String> {
     let output = Command::new("rustup")
         .arg("run")
         .arg(toolkit)
@@ -14,12 +24,19 @@ fn run_tests(toolkit: &str) -> String {
         .arg("test")
         .arg("--")
         .arg("--show-output")
-        .arg("--test-threads=1")
         .output()
         .expect("Error running command");
 
+    match &output.status.success() {
+        false => {
+            //want to add information about the error here too
+            return Err(ReferendumError::TestRunFailure());
+        }
+        true => (),
+    };
+
     match str::from_utf8(&output.stdout) {
-        Ok(v) => v.to_string(),
+        Ok(v) => Ok(v.to_string()),
         Err(e) => panic!("Invalid UTF-8 sequence: {}", e),
     }
 }
@@ -43,7 +60,7 @@ fn get_test_names(lines: &[String]) -> BTreeSet<String> {
         .collect()
 }
 
-fn get_test_result(test_name: &str, lines: &[String]) -> bool {
+fn get_test_result(test_name: &str, lines: &[String]) -> Result<bool> {
     let re = Regex::new("[a-zA-z_0-9]+::[a-zA-Z_0-9]+ ... (ok|FAILED)").unwrap();
     let re_should_panic =
         Regex::new("[a-zA-z_0-9]+::[a-zA-Z_0-9]+ - should panic ... (ok|FAILED)").unwrap();
@@ -63,14 +80,13 @@ fn get_test_result(test_name: &str, lines: &[String]) -> bool {
 
     for item in result_lines.iter() {
         if item.contains(test_name) {
-            return item.contains("ok");
+            return Ok(item.contains("ok"));
         }
     }
-
-    panic!("Error getting test results");
+    Err(ReferendumError::TestResultExtractionFailure())
 }
 
-fn get_test_output(test_name: &str, lines: &[String]) -> String {
+fn get_test_output(test_name: &str, lines: &[String]) -> Result<String> {
     //TODO: Clean this, it's repulsive
     let mut start: usize = 0;
     let mut end: usize = lines.len() - 1;
@@ -99,9 +115,9 @@ fn get_test_output(test_name: &str, lines: &[String]) -> String {
         }
     }
     if !start_found {
-        return "".to_string();
+        return Ok("".to_string());
     }
-    lines[start..=end].concat()
+    Ok(lines[start..=end].concat())
 }
 
 fn get_consensus_hash(tests: &Vec<Test>) -> Option<u64> {
@@ -156,14 +172,16 @@ fn vote(tests: Vec<Test>) -> VoteResult {
     }
 }
 
-fn get_tests(toolkits: Vec<&str>) -> Vec<Test> {
+fn get_tests(toolkits: Vec<&str>) -> Result<Vec<Test>> {
     let mut tests: Vec<Test> = Vec::new();
+    //should I add something here to check that if a toolkit is installed in rustup
     for kit in toolkits {
-        let lines = parse_test_output(&run_tests(kit));
+        let run = &run_tests(kit)?;
+        let lines = parse_test_output(run);
         let unique_test_names = get_test_names(&lines);
         for test in unique_test_names.iter() {
-            let test_output = get_test_output(test, &lines);
-            let test_result = get_test_result(test, &lines);
+            let test_output = get_test_output(test, &lines)?;
+            let test_result = get_test_result(test, &lines)?;
             let output_obj = Test {
                 name: test.clone(),
                 toolkit: kit.to_string(),
@@ -174,7 +192,7 @@ fn get_tests(toolkits: Vec<&str>) -> Vec<Test> {
             tests.push(output_obj);
         }
     }
-    tests
+    Ok(tests)
 }
 
 #[derive(Debug, Clone)]
@@ -199,7 +217,13 @@ fn main() {
         "nightly-x86_64-apple-darwin",
     ];
 
-    let tests = get_tests(toolkits);
+    let tests = match get_tests(toolkits) {
+        Ok(v) => v,
+        Err(e) => {
+            println!("{}", e);
+            exit(1);
+        }
+    };
     let votes = vote(tests);
     dbg!(votes);
 }
