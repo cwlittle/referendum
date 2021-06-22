@@ -414,7 +414,7 @@ mod tests {
             String::from("Hello "),
             String::from("World"),
         ];
-        assert_eq!(get_test_output(&test_name, &lines), "Hello World");
+        assert_eq!(get_test_output(&test_name, &lines).unwrap(), "Hello World");
     }
 
     #[test]
@@ -427,7 +427,7 @@ mod tests {
             String::from("World"),
             String::from("---- tests::test_2 stdout ----"),
         ];
-        assert_eq!(get_test_output(&test_name, &lines), "Hello World");
+        assert_eq!(get_test_output(&test_name, &lines).unwrap(), "Hello World");
     }
 
     #[test]
@@ -440,7 +440,7 @@ mod tests {
             String::from("World"),
             String::from("failures:"),
         ];
-        assert_eq!(get_test_output(&test_name, &lines), "Hello World");
+        assert_eq!(get_test_output(&test_name, &lines).unwrap(), "Hello World");
     }
 
     #[test]
@@ -454,7 +454,7 @@ mod tests {
             String::from(""),
             String::from("successes:"),
         ];
-        assert_eq!(get_test_output(&test_name, &lines), "Hello World");
+        assert_eq!(get_test_output(&test_name, &lines).unwrap(), "Hello World");
     }
 
     #[test]
@@ -491,7 +491,7 @@ mod tests {
             ""
         ];
         let lines: Vec<String> = lines.iter().map(|x| x.to_string()).collect();
-        assert_eq!(get_test_output(&test_name, &lines), "Hello, Earthlings!");
+        assert_eq!(get_test_output(&test_name, &lines).unwrap(), "Hello, Earthlings!");
     }
 
     #[test]
