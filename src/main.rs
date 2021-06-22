@@ -543,4 +543,94 @@ mod tests {
 
         assert!(get_test_result(&test_name, &lines).unwrap());
     }
+
+    #[test]
+    fn vote_all_consensus() {
+        let test_1 = Test {
+            name: "test_name".to_string(),
+            toolkit: "nightly_1".to_string(),
+            result: true,
+            output: "this is the output".to_string(),
+            hash: 42,
+        };
+        let test_2 = Test {
+            name: "test_name".to_string(),
+            toolkit: "nightly_2".to_string(),
+            result: true,
+            output: "this is the output".to_string(),
+            hash: 42,
+        };
+        let test_3 = Test {
+            name: "test_name".to_string(),
+            toolkit: "nightly_3".to_string(),
+            result: true,
+            output: "this is the output".to_string(),
+            hash: 42,
+        };
+        let tests = vec![test_1, test_2, test_3];
+        let votes = vote(tests);
+        assert_eq!(votes.matches.len(), 3);
+        assert_eq!(votes.non_matches.len(), 0);
+        assert_eq!(votes.no_consensus.len(), 0);
+    }
+
+    #[test]
+    fn vote_all_unmatched() {
+        let test_1 = Test {
+            name: "test_name".to_string(),
+            toolkit: "nightly_1".to_string(),
+            result: true,
+            output: "this is the output".to_string(),
+            hash: 42,
+        };
+        let test_2 = Test {
+            name: "test_name".to_string(),
+            toolkit: "nightly_2".to_string(),
+            result: true,
+            output: "this is the output".to_string(),
+            hash: 42,
+        };
+        let test_3 = Test {
+            name: "test_name".to_string(),
+            toolkit: "nightly_3".to_string(),
+            result: true,
+            output: "this is the output".to_string(),
+            hash: 12,
+        };
+        let tests = vec![test_1, test_2, test_3];
+        let votes = vote(tests);
+        assert_eq!(votes.matches.len(), 2);
+        assert_eq!(votes.non_matches.len(), 1);
+        assert_eq!(votes.no_consensus.len(), 0);
+    }
+
+    #[test]
+    fn vote_no_consensus() {
+        let test_1 = Test {
+            name: "test_name".to_string(),
+            toolkit: "nightly_1".to_string(),
+            result: true,
+            output: "this is the output".to_string(),
+            hash: 42,
+        };
+        let test_2 = Test {
+            name: "test_name".to_string(),
+            toolkit: "nightly_2".to_string(),
+            result: true,
+            output: "this is the output".to_string(),
+            hash: 44,
+        };
+        let test_3 = Test {
+            name: "test_name".to_string(),
+            toolkit: "nightly_3".to_string(),
+            result: true,
+            output: "this is the output".to_string(),
+            hash: 12,
+        };
+        let tests = vec![test_1, test_2, test_3];
+        let votes = vote(tests);
+        assert_eq!(votes.matches.len(), 0);
+        assert_eq!(votes.non_matches.len(), 0);
+        assert_eq!(votes.no_consensus.len(), 3);
+    }
 }
