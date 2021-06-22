@@ -491,7 +491,10 @@ mod tests {
             ""
         ];
         let lines: Vec<String> = lines.iter().map(|x| x.to_string()).collect();
-        assert_eq!(get_test_output(&test_name, &lines).unwrap(), "Hello, Earthlings!");
+        assert_eq!(
+            get_test_output(&test_name, &lines).unwrap(),
+            "Hello, Earthlings!"
+        );
     }
 
     #[test]
@@ -523,5 +526,13 @@ mod tests {
         let tests: Vec<Test> = vec![test_1, test_2, test_3];
         let consensus = get_consensus_hash(&tests);
         assert_eq!(consensus, Some(42));
+    }
+
+    #[test]
+    fn get_test_result_normal() {
+        let test_name = "testing::test_name";
+        let lines = ["test testing::test_name ... ok".to_string()];
+
+        assert!(get_test_result(&test_name, &lines).unwrap());
     }
 }
