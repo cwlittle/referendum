@@ -218,7 +218,7 @@ fn generate_test_result_output(name: &str, result: bool, toolkit: Option<&str>) 
 
 fn generate_test_output_output(name: &str, output: &str, toolkit: Option<&str>) -> String {
     let mut builder = Builder::default();
-    builder.append("\t---- test ");
+    builder.append("\n\t---- test ");
     builder.append(name);
     match toolkit {
         Some(kit) => {
