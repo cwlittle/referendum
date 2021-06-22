@@ -633,4 +633,19 @@ mod tests {
         assert_eq!(votes.non_matches.len(), 0);
         assert_eq!(votes.no_consensus.len(), 3);
     }
+
+    #[test]
+    fn test_output_generation() {
+        let output =
+            generate_test_output_output(&"test_name", &"this is the output", Some("tester"));
+        let expected = "\n\t---- test test_name @ tester stdout ----\n\tthis is the output\n";
+        assert_eq!(output, expected);
+    }
+
+    #[test]
+    fn test_output_generation_no_output() {
+        let output = generate_test_output_output(&"test_name", &"", Some("tester"));
+        let expected = "\n\t---- test test_name @ tester stdout ----\n\t\n";
+        assert_eq!(output, expected);
+    }
 }
