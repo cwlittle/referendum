@@ -23,6 +23,7 @@ fn run_tests(toolkit: &str) -> Result<String> {
         .arg("cargo")
         .arg("test")
         .arg("--")
+        .arg("--test-threads=1")
         .arg("--show-output")
         .output()
         .expect("Error running command");
@@ -195,6 +196,141 @@ fn get_tests(toolkits: Vec<&str>) -> Result<Vec<Test>> {
     Ok(tests)
 }
 
+fn generate_test_result_output(name: &str, result: bool, toolkit: Option<&str>) -> String {
+    let mut builder = Builder::default();
+    builder.append("test ");
+    builder.append(name.to_string());
+    match toolkit {
+        Some(kit) => {
+            builder.append(" @ ");
+            builder.append(kit);
+        }
+        None => builder.append(" "),
+    }
+    builder.append(" ... ");
+    if result {
+        builder.append("ok");
+    } else {
+        builder.append("FAILED");
+    }
+    builder.string().unwrap()
+}
+
+fn generate_test_output_output(name: &str, output: &str, toolkit: Option<&str>) -> String {
+    let mut builder = Builder::default();
+    builder.append("\t---- test ");
+    builder.append(name);
+    match toolkit {
+        Some(kit) => {
+            builder.append(" @ ");
+            builder.append(kit);
+        }
+        None => (),
+    }
+    builder.append(" stdout ----\n");
+    builder.append("\t");
+    builder.append(output);
+    builder.append("\n");
+
+    builder.string().unwrap()
+}
+
+fn generate_consensus_map(consensus_votes: Vec<Test>) -> HashMap<String, Consensus> {
+    let mut consensus_map: HashMap<String, Consensus> = HashMap::new();
+    for matched_vote in consensus_votes.iter() {
+        if !consensus_map.contains_key(&matched_vote.name.to_string()) {
+            let consensus = Consensus {
+                name: matched_vote.name.clone(),
+                result: matched_vote.result,
+                output: matched_vote.output.clone(),
+            };
+            consensus_map.insert(consensus.name.to_string(), consensus);
+        }
+    }
+    consensus_map
+}
+
+fn get_consensus_results(consensus_map: &HashMap<String, Consensus>) -> String {
+    let mut builder = Builder::default();
+    builder.append("Consensus Test Results...\n");
+    for (name, vote) in consensus_map.iter() {
+        builder.append(generate_test_result_output(
+            &name,
+            vote.result,
+            Some("consensus"),
+        ));
+        if !vote.output.is_empty() {
+            builder.append(generate_test_output_output(
+                &name,
+                &vote.output,
+                Some("consensus"),
+            ));
+        }
+        builder.append("\n");
+    }
+
+    builder.string().unwrap()
+}
+
+fn get_dissenting_results(
+    dissenting_votes: Vec<Test>,
+    consensus_map: &HashMap<String, Consensus>,
+) -> String {
+    let mut builder = Builder::default();
+    builder.append("Dissenting Test Results...\n");
+    for dissenting_vote in dissenting_votes.iter() {
+        let consensus = consensus_map
+            .get(&dissenting_vote.name)
+            .expect("Non-matched test vote does not have corresponding consensus");
+
+        builder.append(generate_test_result_output(
+            &consensus.name,
+            consensus.result,
+            Some("consensus"),
+        ));
+        builder.append("\n");
+
+        builder.append(generate_test_result_output(
+            &dissenting_vote.name,
+            dissenting_vote.result,
+            Some(&dissenting_vote.toolkit),
+        ));
+
+        builder.append(generate_test_output_output(
+            &consensus.name,
+            &consensus.output,
+            Some("consensus"),
+        ));
+        builder.append(generate_test_output_output(
+            &dissenting_vote.name,
+            &dissenting_vote.output,
+            Some(&dissenting_vote.toolkit),
+        ));
+
+        builder.append("\n");
+    }
+    builder.string().unwrap()
+}
+
+fn get_no_consensus_results(no_consensus_votes: Vec<Test>) -> String {
+    let mut builder = Builder::default();
+    builder.append("No Consensus Results...\n");
+    for vote in no_consensus_votes.iter() {
+        builder.append(generate_test_result_output(
+            &vote.name,
+            vote.result,
+            Some(&vote.toolkit),
+        ));
+        builder.append(generate_test_output_output(
+            &vote.name,
+            &vote.output,
+            Some(&vote.toolkit),
+        ));
+        builder.append("\n");
+    }
+    builder.string().unwrap()
+}
+
 #[derive(Debug, Clone)]
 struct Test {
     name: String,
@@ -202,6 +338,13 @@ struct Test {
     result: bool,
     output: String,
     hash: u64,
+}
+
+#[derive(Debug)]
+struct Consensus {
+    name: String,
+    result: bool,
+    output: String,
 }
 
 #[derive(Debug)]
@@ -217,6 +360,7 @@ fn main() {
         "nightly-x86_64-apple-darwin",
     ];
 
+    //check that all toolkits are installed before running this
     let tests = match get_tests(toolkits) {
         Ok(v) => v,
         Err(e) => {
@@ -225,7 +369,14 @@ fn main() {
         }
     };
     let votes = vote(tests);
-    dbg!(votes);
+
+    let consensus_map = generate_consensus_map(votes.matches);
+    println!("{}", get_consensus_results(&consensus_map));
+    println!(
+        "{}",
+        get_dissenting_results(votes.non_matches, &consensus_map)
+    );
+    println!("{}", get_no_consensus_results(votes.no_consensus));
 }
 
 #[cfg(test)]
