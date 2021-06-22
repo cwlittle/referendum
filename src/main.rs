@@ -648,4 +648,18 @@ mod tests {
         let expected = "\n\t---- test test_name @ tester stdout ----\n\t\n";
         assert_eq!(output, expected);
     }
+
+    #[test]
+    fn test_pass_result_generation() {
+        let output = generate_test_result_output(&"test_name", true, Some("tester"));
+        let expected = "test test_name @ tester ... ok";
+        assert_eq!(output, expected);
+    }
+
+    #[test]
+    fn test_failure_result_generation() {
+        let output = generate_test_result_output(&"test_name", false, Some("tester"));
+        let expected = "test test_name @ tester ... FAILED";
+        assert_eq!(output, expected);
+    }
 }
