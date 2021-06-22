@@ -535,4 +535,12 @@ mod tests {
 
         assert!(get_test_result(&test_name, &lines).unwrap());
     }
+
+    #[test]
+    fn get_test_result_test_panics() {
+        let test_name = "testing::test_name";
+        let lines = ["test testing::test_name - should panic ... ok".to_string()];
+
+        assert!(get_test_result(&test_name, &lines).unwrap());
+    }
 }
