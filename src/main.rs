@@ -751,4 +751,25 @@ mod tests {
         assert_eq!(get_dissenting_results(vec![test_4], &map),
             "Dissenting Test Results...\ntest test_name @ consensus ... ok\ntest test_name @ nightly_2 ... ok\n\t---- test test_name @ consensus stdout ----\n\tthis is the output\n\n\t---- test test_name @ nightly_2 stdout ----\n\tthis is the output\n\n");
     }
+
+    #[test]
+    fn no_consensus_result_normal_generation() {
+        let test_1 = Test {
+            name: "test_name".to_string(),
+            toolkit: "nightly_1".to_string(),
+            result: true,
+            output: "this is the output".to_string(),
+            hash: 12,
+        };
+        let test_2 = Test {
+            name: "test_name".to_string(),
+            toolkit: "nightly_2".to_string(),
+            result: true,
+            output: "this is the output".to_string(),
+            hash: 44,
+        };
+        let tests = vec![test_1, test_2];
+        assert_eq!(get_no_consensus_results(tests),
+            "No Consensus Results...\ntest test_name @ nightly_1 ... ok\n\t---- test test_name @ nightly_1 stdout ----\n\tthis is the output\n\ntest test_name @ nightly_2 ... ok\n\t---- test test_name @ nightly_2 stdout ----\n\tthis is the output\n\n");
+    }
 }
