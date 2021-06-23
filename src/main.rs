@@ -692,4 +692,33 @@ mod tests {
         assert_eq!(format!("{:?}", generate_consensus_map(tests)),
             "{\"test_name\": Consensus { name: \"test_name\", result: true, output: \"this is the output\" }}");
     }
+
+    #[test]
+    fn consensus_result_normal_generation() {
+        let test_1 = Test {
+            name: "test_name".to_string(),
+            toolkit: "nightly_1".to_string(),
+            result: true,
+            output: "this is the output".to_string(),
+            hash: 42,
+        };
+        let test_2 = Test {
+            name: "test_name".to_string(),
+            toolkit: "nightly_2".to_string(),
+            result: true,
+            output: "this is the output".to_string(),
+            hash: 44,
+        };
+        let test_3 = Test {
+            name: "test_name".to_string(),
+            toolkit: "nightly_3".to_string(),
+            result: true,
+            output: "this is the output".to_string(),
+            hash: 42,
+        };
+        let tests = vec![test_1, test_2, test_3];
+        let map = generate_consensus_map(tests);
+        assert_eq!(get_consensus_results(&map),
+            "Consensus Test Results...\ntest test_name @ consensus ... ok\n\t---- test test_name @ consensus stdout ----\n\tthis is the output\n\n");
+    }
 }
