@@ -2,6 +2,7 @@ use fasthash::sea;
 use regex::Regex;
 use std::collections::BTreeSet;
 use std::collections::HashMap;
+use std::fmt::Debug;
 use std::process::{exit, Command};
 use std::str;
 use string_builder::Builder;
@@ -661,5 +662,34 @@ mod tests {
         let output = generate_test_result_output(&"test_name", false, Some("tester"));
         let expected = "test test_name @ tester ... FAILED";
         assert_eq!(output, expected);
+    }
+
+    #[test]
+    fn consensus_map_normal_generation() {
+        let test_1 = Test {
+            name: "test_name".to_string(),
+            toolkit: "nightly_1".to_string(),
+            result: true,
+            output: "this is the output".to_string(),
+            hash: 42,
+        };
+        let test_2 = Test {
+            name: "test_name".to_string(),
+            toolkit: "nightly_2".to_string(),
+            result: true,
+            output: "this is the output".to_string(),
+            hash: 44,
+        };
+        let test_3 = Test {
+            name: "test_name".to_string(),
+            toolkit: "nightly_3".to_string(),
+            result: true,
+            output: "this is the output".to_string(),
+            hash: 42,
+        };
+        let tests = vec![test_1, test_2, test_3];
+
+        assert_eq!(format!("{:?}", generate_consensus_map(tests)),
+            "{\"test_name\": Consensus { name: \"test_name\", result: true, output: \"this is the output\" }}");
     }
 }
