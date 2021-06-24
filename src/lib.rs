@@ -19,7 +19,7 @@ pub enum ReferendumError {
 
 pub type Result<T> = std::result::Result<T, ReferendumError>;
 
-pub fn run_tests(toolkit: &str) -> Result<String> {
+fn run_tests(toolkit: &str) -> Result<String> {
     let output = Command::new("rustup")
         .arg("run")
         .arg(toolkit)
@@ -45,13 +45,13 @@ pub fn run_tests(toolkit: &str) -> Result<String> {
     }
 }
 
-pub fn parse_test_output(output: &str) -> Vec<String> {
+fn parse_test_output(output: &str) -> Vec<String> {
     let lines: Vec<String> = output.split('\n').map(|x| x.to_string()).collect();
 
     lines
 }
 
-pub fn get_test_names(lines: &[String]) -> BTreeSet<String> {
+fn get_test_names(lines: &[String]) -> BTreeSet<String> {
     let re = Regex::new("test [a-zA-z_0-9]+::[a-zA-Z_0-9]+").unwrap();
     let lines_string = lines.join(" ");
     let names: Vec<String> = re
@@ -64,7 +64,7 @@ pub fn get_test_names(lines: &[String]) -> BTreeSet<String> {
         .collect()
 }
 
-pub fn get_test_result(test_name: &str, lines: &[String]) -> Result<bool> {
+fn get_test_result(test_name: &str, lines: &[String]) -> Result<bool> {
     let re = Regex::new("[a-zA-z_0-9]+::[a-zA-Z_0-9]+ ... (ok|FAILED)").unwrap();
     let re_should_panic =
         Regex::new("[a-zA-z_0-9]+::[a-zA-Z_0-9]+ - should panic ... (ok|FAILED)").unwrap();
@@ -90,7 +90,7 @@ pub fn get_test_result(test_name: &str, lines: &[String]) -> Result<bool> {
     Err(ReferendumError::TestResultExtractionFailure())
 }
 
-pub fn get_test_output(test_name: &str, lines: &[String]) -> Result<String> {
+fn get_test_output(test_name: &str, lines: &[String]) -> Result<String> {
     //TODO: Clean this, it's repulsive
     let mut start: usize = 0;
     let mut end: usize = lines.len() - 1;
@@ -124,7 +124,7 @@ pub fn get_test_output(test_name: &str, lines: &[String]) -> Result<String> {
     Ok(lines[start..=end].concat())
 }
 
-pub fn get_consensus_hash(tests: &Vec<Test>) -> Option<u64> {
+fn get_consensus_hash(tests: &Vec<Test>) -> Option<u64> {
     let mut map: HashMap<u64, u8> = HashMap::new();
     for test in tests {
         let count = map.entry(test.hash).or_insert(0);
@@ -203,7 +203,7 @@ pub fn get_tests(toolkits: Vec<&str>) -> Result<Vec<Test>> {
     Ok(tests)
 }
 
-pub fn generate_test_result_output(name: &str, result: bool, toolkit: Option<&str>) -> String {
+fn generate_test_result_output(name: &str, result: bool, toolkit: Option<&str>) -> String {
     let mut builder = Builder::default();
     builder.append("test ");
     builder.append(name.to_string());
@@ -223,7 +223,7 @@ pub fn generate_test_result_output(name: &str, result: bool, toolkit: Option<&st
     builder.string().unwrap()
 }
 
-pub fn generate_test_output_output(name: &str, output: &str, toolkit: Option<&str>) -> String {
+fn generate_test_output_output(name: &str, output: &str, toolkit: Option<&str>) -> String {
     let mut builder = Builder::default();
     builder.append("\n\t---- test ");
     builder.append(name);
