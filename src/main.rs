@@ -28,7 +28,7 @@ fn main() {
     if !votes.matches.is_empty() {
         println!("{}", get_consensus_results(&consensus_map));
     } else {
-        println!("{}", "No consensus determined among test ouputs ...\n");
+        println!("No consensus determined among test ouputs ...\n");
     }
 
     if !votes.non_matches.is_empty() {
@@ -37,7 +37,7 @@ fn main() {
             get_dissenting_results(votes.non_matches, &consensus_map)
         );
     } else {
-        println!("{}", "No dissenting test outputs found ...\n");
+        println!("No dissenting test outputs found ...\n");
     }
 
     if !votes.no_consensus.is_empty() {

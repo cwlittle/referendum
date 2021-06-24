@@ -3,7 +3,7 @@ use regex::Regex;
 use std::collections::BTreeSet;
 use std::collections::HashMap;
 use std::fmt::Debug;
-use std::process::{exit, Command};
+use std::process::Command;
 use std::str;
 use string_builder::Builder;
 
@@ -124,25 +124,25 @@ fn get_test_output(test_name: &str, lines: &[String]) -> Result<String> {
     Ok(lines[start..=end].concat())
 }
 
-fn get_consensus_hash(tests: &Vec<Test>) -> Option<u64> {
+fn get_consensus_hash(tests: &[Test]) -> Option<u64> {
     let mut map: HashMap<u64, u8> = HashMap::new();
     for test in tests {
         let count = map.entry(test.hash).or_insert(0);
         *count += 1;
     }
 
-    let max_hash = map.iter().max_by(|a, b| a.1.cmp(&b.1)).unwrap();
+    let max_hash = map.iter().max_by(|a, b| a.1.cmp(b.1)).unwrap();
 
     match max_hash.1 {
         1 => None,
-        _ => Some(max_hash.0.clone()),
+        _ => Some(*max_hash.0),
     }
 }
 
 pub fn vote(tests: Vec<Test>) -> Result<VoteResult> {
     let mut test_map: HashMap<String, Vec<Test>> = HashMap::new();
     for test in tests {
-        let entry = test_map.entry(test.name.clone()).or_insert(Vec::new());
+        let entry = test_map.entry(test.name.clone()).or_insert_with(Vec::new);
         entry.push(test);
     }
 
@@ -227,13 +227,11 @@ fn generate_test_output_output(name: &str, output: &str, toolkit: Option<&str>) 
     let mut builder = Builder::default();
     builder.append("\n\t---- test ");
     builder.append(name);
-    match toolkit {
-        Some(kit) => {
-            builder.append(" @ ");
-            builder.append(kit);
-        }
-        None => (),
+    if let Some(kit) = toolkit {
+        builder.append(" @ ");
+        builder.append(kit);
     }
+
     builder.append(" stdout ----\n");
     builder.append("\t");
     builder.append(output);
@@ -242,7 +240,7 @@ fn generate_test_output_output(name: &str, output: &str, toolkit: Option<&str>) 
     builder.string().unwrap()
 }
 
-pub fn generate_consensus_map(consensus_votes: &Vec<Test>) -> HashMap<String, Consensus> {
+pub fn generate_consensus_map(consensus_votes: &[Test]) -> HashMap<String, Consensus> {
     let mut consensus_map: HashMap<String, Consensus> = HashMap::new();
     for matched_vote in consensus_votes.iter() {
         if !consensus_map.contains_key(&matched_vote.name.to_string()) {
@@ -262,13 +260,13 @@ pub fn get_consensus_results(consensus_map: &HashMap<String, Consensus>) -> Stri
     builder.append("Consensus Test Results...\n");
     for (name, vote) in consensus_map.iter() {
         builder.append(generate_test_result_output(
-            &name,
+            name,
             vote.result,
             Some("consensus"),
         ));
         if !vote.output.is_empty() {
             builder.append(generate_test_output_output(
-                &name,
+                name,
                 &vote.output,
                 Some("consensus"),
             ));
