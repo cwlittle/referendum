@@ -13,6 +13,8 @@ pub enum ReferendumError {
     TestRunFailure(),
     #[error("Test run extraction failure")]
     TestResultExtractionFailure(),
+    #[error("Tests not found failure")]
+    TestNotFound(),
 }
 
 pub type Result<T> = std::result::Result<T, ReferendumError>;
@@ -137,7 +139,7 @@ fn get_consensus_hash(tests: &Vec<Test>) -> Option<u64> {
     }
 }
 
-fn vote(tests: Vec<Test>) -> VoteResult {
+fn vote(tests: Vec<Test>) -> Result<VoteResult> {
     let mut test_map: HashMap<String, Vec<Test>> = HashMap::new();
     for test in tests {
         let entry = test_map.entry(test.name.clone()).or_insert(Vec::new());
@@ -167,11 +169,15 @@ fn vote(tests: Vec<Test>) -> VoteResult {
         }
     }
 
-    VoteResult {
+    if matches.is_empty() && non_matches.is_empty() && no_consensus.is_empty() {
+        return Err(ReferendumError::TestNotFound());
+    }
+
+    Ok(VoteResult {
         matches,
         non_matches,
         no_consensus,
-    }
+    })
 }
 
 fn get_tests(toolkits: Vec<&str>) -> Result<Vec<Test>> {
@@ -236,7 +242,7 @@ fn generate_test_output_output(name: &str, output: &str, toolkit: Option<&str>) 
     builder.string().unwrap()
 }
 
-fn generate_consensus_map(consensus_votes: Vec<Test>) -> HashMap<String, Consensus> {
+fn generate_consensus_map(consensus_votes: &Vec<Test>) -> HashMap<String, Consensus> {
     let mut consensus_map: HashMap<String, Consensus> = HashMap::new();
     for matched_vote in consensus_votes.iter() {
         if !consensus_map.contains_key(&matched_vote.name.to_string()) {
@@ -369,15 +375,34 @@ fn main() {
             exit(1);
         }
     };
-    let votes = vote(tests);
+    let votes = match vote(tests) {
+        Ok(v) => v,
+        Err(_e) => {
+            println!("No tests found");
+            std::process::exit(1);
+        }
+    };
 
-    let consensus_map = generate_consensus_map(votes.matches);
-    println!("{}", get_consensus_results(&consensus_map));
-    println!(
-        "{}",
-        get_dissenting_results(votes.non_matches, &consensus_map)
-    );
-    println!("{}", get_no_consensus_results(votes.no_consensus));
+    let consensus_map = generate_consensus_map(&votes.matches);
+
+    if !votes.matches.is_empty() {
+        println!("{}", get_consensus_results(&consensus_map));
+    } else {
+        println!("{}", "No consensus determined among test ouputs ...\n");
+    }
+
+    if !votes.non_matches.is_empty() {
+        println!(
+            "{}",
+            get_dissenting_results(votes.non_matches, &consensus_map)
+        );
+    } else {
+        println!("{}", "No dissenting test outputs found ...\n");
+    }
+
+    if !votes.no_consensus.is_empty() {
+        println!("{}", get_no_consensus_results(votes.no_consensus));
+    }
 }
 
 #[cfg(test)]
@@ -569,7 +594,7 @@ mod tests {
             hash: 42,
         };
         let tests = vec![test_1, test_2, test_3];
-        let votes = vote(tests);
+        let votes = vote(tests).unwrap();
         assert_eq!(votes.matches.len(), 3);
         assert_eq!(votes.non_matches.len(), 0);
         assert_eq!(votes.no_consensus.len(), 0);
@@ -599,7 +624,7 @@ mod tests {
             hash: 12,
         };
         let tests = vec![test_1, test_2, test_3];
-        let votes = vote(tests);
+        let votes = vote(tests).unwrap();
         assert_eq!(votes.matches.len(), 2);
         assert_eq!(votes.non_matches.len(), 1);
         assert_eq!(votes.no_consensus.len(), 0);
@@ -629,7 +654,7 @@ mod tests {
             hash: 12,
         };
         let tests = vec![test_1, test_2, test_3];
-        let votes = vote(tests);
+        let votes = vote(tests).unwrap();
         assert_eq!(votes.matches.len(), 0);
         assert_eq!(votes.non_matches.len(), 0);
         assert_eq!(votes.no_consensus.len(), 3);
@@ -689,7 +714,7 @@ mod tests {
         };
         let tests = vec![test_1, test_2, test_3];
 
-        assert_eq!(format!("{:?}", generate_consensus_map(tests)),
+        assert_eq!(format!("{:?}", generate_consensus_map(&tests)),
             "{\"test_name\": Consensus { name: \"test_name\", result: true, output: \"this is the output\" }}");
     }
 
@@ -717,7 +742,7 @@ mod tests {
             hash: 42,
         };
         let tests = vec![test_1, test_2, test_3];
-        let map = generate_consensus_map(tests);
+        let map = generate_consensus_map(&tests);
         assert_eq!(get_consensus_results(&map),
             "Consensus Test Results...\ntest test_name @ consensus ... ok\n\t---- test test_name @ consensus stdout ----\n\tthis is the output\n\n");
     }
@@ -747,7 +772,7 @@ mod tests {
         };
         let test_4 = test_2.clone();
         let tests = vec![test_1, test_2, test_3];
-        let map = generate_consensus_map(tests);
+        let map = generate_consensus_map(&tests);
         assert_eq!(get_dissenting_results(vec![test_4], &map),
             "Dissenting Test Results...\ntest test_name @ consensus ... ok\ntest test_name @ nightly_2 ... ok\n\t---- test test_name @ consensus stdout ----\n\tthis is the output\n\n\t---- test test_name @ nightly_2 stdout ----\n\tthis is the output\n\n");
     }
