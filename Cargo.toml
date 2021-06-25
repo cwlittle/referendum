@@ -1,7 +1,13 @@
 [package]
-name = "referendum"
+name = "cargo-referendum"
 version = "0.1.0"
+authors = ["Taiki Endo <te316e89@gmail.com>"]
 edition = "2018"
+license = "MIT"
+repository = "https://github.com/cwlittle/referendum"
+keywords = ["cargo", "subcommand", "testing", "differential testing"]
+categories = ["command-line-utilities", "development-tools::cargo-plugins"]
+exclude = ["/.*", "/tools"]
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
@@ -10,3 +16,4 @@ regex = "1"
 string-builder = "0.2.0"
 fasthash = "0.4"
 thiserror = "1.0"
+clap = "2.33.0"
