@@ -24,4 +24,13 @@ Referendum is not meant to replace cargo test. Therefore, before runnning refere
 
 ## Usage
 
+To install:
+```
+cargo install cargo-referendum
+```
+
+To run:
+```
+cargo referendum -- <toolkit_name> <toolkit_name> <toolkit_name>
+```
 
