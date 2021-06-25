@@ -1,5 +1,5 @@
 use clap::{crate_version, App, Arg, SubCommand};
-use referendum::*;
+use cargo_referendum::*;
 use std::process::exit;
 
 fn main() {
