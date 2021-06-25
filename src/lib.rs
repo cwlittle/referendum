@@ -90,38 +90,26 @@ fn get_test_result(test_name: &str, lines: &[String]) -> Result<bool> {
     Err(ReferendumError::TestResultExtractionFailure())
 }
 
-fn get_test_output(test_name: &str, lines: &[String]) -> Result<String> {
-    //TODO: Clean this, it's repulsive
-    let mut start: usize = 0;
-    let mut end: usize = lines.len() - 1;
+fn generate_output_map(lines: &String) -> HashMap<String, String> {
+    let re = Regex::new(r"---- [a-zA-Z_0-9]+::[a-zA-Z_0-9]+ stdout ----").unwrap();
+    let test_name_re = Regex::new(r"[a-zA-Z_0-9]+::[a-zA-Z_0-9]+").unwrap();
+    let mut map = HashMap::new();
 
-    let mut builder = Builder::default();
-    builder.append("---- ");
-    builder.append(test_name.to_string());
-    builder.append(" stdout ----");
-    let start_string = builder.string().unwrap();
-    let start_re = Regex::new(&start_string).unwrap();
-    let next_test_re = Regex::new(r"---- [a-zA-Z_0-9]+::[a-zA-Z_0-9]+ stdout ----").unwrap();
-    let failure_re = Regex::new(r"failures:").unwrap();
-    let success_re = Regex::new(r"successes:").unwrap();
-
-    let mut start_found = false;
-    for (i, line) in lines.iter().enumerate() {
-        if start_re.is_match(line) {
-            start_found = true;
-            start = i + 1;
-        } else if next_test_re.is_match(line)
-            || failure_re.is_match(line)
-            || success_re.is_match(line) && start_found && i - 1 > start
-        {
-            end = i - 1;
-            break;
+    let lines = parse_test_output(&lines);
+    for (mut i, line) in lines.iter().enumerate() {
+        if re.is_match(line) {
+            let start = i;
+            //this must match if re matches
+            let test = test_name_re.find(line).unwrap();
+            let name = line[test.start()..test.end()].to_string();
+            while i < lines.len() - 1 && lines[i] != "" {
+                i += 1;
+            }
+            let output = lines[start + 1..i].join("\n").clone();
+            map.insert(name, output);
         }
     }
-    if !start_found {
-        return Ok("".to_string());
-    }
-    Ok(lines[start..=end].concat())
+    map
 }
 
 fn get_consensus_hash(tests: &[Test]) -> Option<u64> {
@@ -185,10 +173,14 @@ pub fn get_tests(toolkits: Vec<&str>) -> Result<Vec<Test>> {
     //should I add something here to check that if a toolkit is installed in rustup
     for kit in toolkits {
         let run = &run_tests(kit)?;
+        let output_map = generate_output_map(run);
         let lines = parse_test_output(run);
         let unique_test_names = get_test_names(&lines);
         for test in unique_test_names.iter() {
-            let test_output = get_test_output(test, &lines)?;
+            let test_output = match output_map.get(test) {
+                Some(v) => v.to_string(),
+                None => "".to_string(),
+            };
             let test_result = get_test_result(test, &lines)?;
             let output_obj = Test {
                 name: test.clone(),
@@ -383,98 +375,6 @@ mod tests {
         let mut expected = BTreeSet::new();
         expected.insert(String::from("tests::test_1"));
         assert_eq!(get_test_names(&input), expected);
-    }
-
-    #[test]
-    fn extract_test_output_break_end() {
-        let test_name = String::from("tests::test_1");
-        let lines = vec![
-            String::from("what"),
-            String::from("---- tests::test_1 stdout ----"),
-            String::from("Hello "),
-            String::from("World"),
-        ];
-        assert_eq!(get_test_output(&test_name, &lines).unwrap(), "Hello World");
-    }
-
-    #[test]
-    fn extract_test_output_break_next_test() {
-        let test_name = String::from("tests::test_1");
-        let lines = vec![
-            String::from("what"),
-            String::from("---- tests::test_1 stdout ----"),
-            String::from("Hello "),
-            String::from("World"),
-            String::from("---- tests::test_2 stdout ----"),
-        ];
-        assert_eq!(get_test_output(&test_name, &lines).unwrap(), "Hello World");
-    }
-
-    #[test]
-    fn extract_test_output_break_failures() {
-        let test_name = String::from("tests::test_1");
-        let lines = vec![
-            String::from("what"),
-            String::from("---- tests::test_1 stdout ----"),
-            String::from("Hello "),
-            String::from("World"),
-            String::from("failures:"),
-        ];
-        assert_eq!(get_test_output(&test_name, &lines).unwrap(), "Hello World");
-    }
-
-    #[test]
-    fn extract_test_output_break_successes() {
-        let test_name = String::from("tests::test_1");
-        let lines = vec![
-            String::from("what"),
-            String::from("---- tests::test_1 stdout ----"),
-            String::from("Hello "),
-            String::from("World"),
-            String::from(""),
-            String::from("successes:"),
-        ];
-        assert_eq!(get_test_output(&test_name, &lines).unwrap(), "Hello World");
-    }
-
-    #[test]
-    fn extract_test_output_real() {
-        let test_name = String::from("tests::test_1");
-        let lines = [
-            "", 
-            "running 2 tests", 
-            "test tests::test_1 ... ok", 
-            "test tests::test_2 ... FAILED", 
-            "", 
-            "successes:", 
-            "", 
-            "---- tests::test_1 stdout ----", 
-            "Hello, Earthlings!", 
-            "", 
-            "", 
-            "successes:", 
-            "    tests::test_1", 
-            "", 
-            "failures:", 
-            "", 
-            "---- tests::test_2 stdout ----", 
-            "thread 'main' panicked at 'assertion failed: `(left == right)`", 
-            "  left: `1`,", " right: `2`', src/main.rs:14:9", 
-            "note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace", 
-            "", 
-            "", 
-            "failures:", 
-            "    tests::test_2", 
-            "", 
-            "test result: FAILED. 1 passed; 1 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s", 
-            "", 
-            ""
-        ];
-        let lines: Vec<String> = lines.iter().map(|x| x.to_string()).collect();
-        assert_eq!(
-            get_test_output(&test_name, &lines).unwrap(),
-            "Hello, Earthlings!"
-        );
     }
 
     #[test]
@@ -750,5 +650,34 @@ mod tests {
         let tests = vec![test_1, test_2];
         assert_eq!(get_no_consensus_results(tests),
             "No Consensus Results...\ntest test_name @ nightly_1 ... ok\n\t---- test test_name @ nightly_1 stdout ----\n\tthis is the output\n\ntest test_name @ nightly_2 ... ok\n\t---- test test_name @ nightly_2 stdout ----\n\tthis is the output\n\n");
+    }
+
+    #[test]
+    fn multiple_test_outputs() {
+        let output = "---- tests::test_1 stdout ----
+this is the first chunk of output
+
+---- tests::test_2 stdout ----
+this is the second chunk of output
+
+---- tests::test_3 stdout ----
+this is the third chunk of output
+
+successes:"
+            .to_string();
+
+        let output_map = generate_output_map(&output);
+        assert_eq!(
+            output_map.get("tests::test_1").unwrap(),
+            "this is the first chunk of output"
+        );
+        assert_eq!(
+            output_map.get("tests::test_2").unwrap(),
+            "this is the second chunk of output"
+        );
+        assert_eq!(
+            output_map.get("tests::test_3").unwrap(),
+            "this is the third chunk of output"
+        );
     }
 }
