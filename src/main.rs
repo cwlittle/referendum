@@ -1,8 +1,29 @@
+use clap::{crate_version, App, Arg, SubCommand};
 use referendum::*;
 use std::process::exit;
 
 fn main() {
-    let toolkits = vec![
+    let args = App::new("cargo-referendum")
+        .author("Charlie Little, <cwlittle@utexas.edu>")
+        .about("Differential testing tool for unit tests")
+        .version(concat!("version: ", crate_version!()))
+        .bin_name("cargo")
+        .subcommand(
+            SubCommand::with_name("referendum")
+                .about("Differential testing tool for unit tests")
+                .version(concat!("version: ", crate_version!()))
+                .arg(Arg::with_name("toolkits").required(true).min_values(1)),
+        )
+        .get_matches();
+
+    let mut toolkits: Vec<_> = Vec::new();
+    if let Some(args) = args.subcommand_matches("referendum") {
+        toolkits = args.values_of("toolkits").unwrap().collect();
+    } else {
+        exit(1);
+    }
+
+    let old_toolkits = vec![
         "nightly-2021-06-03-x86_64-apple-darwin",
         "nightly-x86_64-apple-darwin",
     ];
