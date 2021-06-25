@@ -90,19 +90,19 @@ fn get_test_result(test_name: &str, lines: &[String]) -> Result<bool> {
     Err(ReferendumError::TestResultExtractionFailure())
 }
 
-fn generate_output_map(lines: &String) -> HashMap<String, String> {
+fn generate_output_map(lines: &str) -> HashMap<String, String> {
     let re = Regex::new(r"---- [a-zA-Z_0-9]+::[a-zA-Z_0-9]+ stdout ----").unwrap();
     let test_name_re = Regex::new(r"[a-zA-Z_0-9]+::[a-zA-Z_0-9]+").unwrap();
     let mut map = HashMap::new();
 
-    let lines = parse_test_output(&lines);
+    let lines = parse_test_output(lines);
     for (mut i, line) in lines.iter().enumerate() {
         if re.is_match(line) {
             let start = i;
             //this must match if re matches
             let test = test_name_re.find(line).unwrap();
             let name = line[test.start()..test.end()].to_string();
-            while i < lines.len() - 1 && lines[i] != "" {
+            while i < lines.len() - 1 && !lines[i].is_empty() {
                 i += 1;
             }
             let output = lines[start + 1..i].join("\n").clone();
